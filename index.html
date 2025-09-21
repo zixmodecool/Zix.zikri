@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Downloader versi Zikri</title>
+  <style>
+    * {box-sizing:border-box;}
+    html,body {
+      margin:0;padding:0;width:100%;height:100%;
+      font-family:Arial,sans-serif;color:#fff;
+      text-align:center;overflow-x:hidden;background:#000;
+    }
+    #bg-video {
+      position:fixed;top:0;left:0;width:100%;height:100%;
+      object-fit:cover;z-index:-1;background:#000;
+    }
+    #bg-music {display:none;}
+    .container {
+      position:relative;z-index:2;background:rgba(0,0,0,0.6);
+      padding:20px;margin:40px auto;border-radius:15px;
+      width:90%;max-width:420px;box-shadow:0 4px 15px rgba(0,0,0,0.5);
+    }
+    h2 {color:yellow;margin-bottom:15px;}
+    input {
+      width:100%;padding:10px;margin-bottom:15px;
+      border:none;border-radius:10px;font-size:15px;
+    }
+    button {
+      width:100%;padding:12px;margin:6px 0;
+      border:none;border-radius:10px;font-weight:bold;
+      cursor:pointer;font-size:15px;
+    }
+    .download-btn {background:linear-gradient(to right,#ff0080,#7928ca);color:#fff;}
+    .toggle-btn {background:#28a745;color:#fff;}
+    #preview {
+      margin-top:20px;background:rgba(255,255,255,0.1);
+      border-radius:10px;padding:10px;display:none;
+    }
+    #preview img {max-width:100%;border-radius:10px;margin-bottom:10px;}
+    #title {font-weight:bold;margin-bottom:5px;color:#ffd700;}
+    #music {font-size:14px;color:#a0e6ff;}
+    /* Menu Download Popup */
+    .menu-popup {
+      display:none;flex-direction:column;align-items:center;
+      position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);
+      background:rgba(0,0,0,0.9);padding:20px;border-radius:12px;
+      z-index:1000;box-shadow:0 4px 12px rgba(0,0,0,0.5);
+      width:90%;max-width:300px;
+    }
+    .menu-popup button {
+      margin:6px 0;padding:10px;width:100%;border-radius:8px;
+      background:#333;color:#fff;font-weight:bold;cursor:pointer;
+    }
+    .menu-popup .close-btn {background:crimson;}
+  </style>
+</head>
+<body>
+  <video autoplay muted loop playsinline preload="auto" id="bg-video">
+    <source src="https://cdn.pixabay.com/video/2021/07/20/84427-569174853_large.mp4" type="video/mp4">
+  </video>
+  <audio id="bg-music" autoplay loop>
+    <source src="https://cdn.pixabay.com/download/audio/2022/03/15/audio_f7bff6c259.mp3?filename=calm-lofi-beat-112199.mp3" type="audio/mpeg">
+  </audio>
+
+  <div class="container">
+    <h2>Downloader versi Zikri</h2>
+    <input type="text" id="link" placeholder="Tempel tautan TikTok di sini" oninput="updatePreview()">
+    <div id="preview">
+      <img id="thumbnail" src="" alt="Thumbnail">
+      <div id="title"></div>
+      <div id="music"></div>
+    </div>
+    <button class="download-btn" onclick="showMenu()">Download</button>
+    <button class="toggle-btn" onclick="toggleSuara()">ON / OFF Suara</button>
+  </div>
+
+  <!-- Menu Popup -->
+  <div id="menuPopup" class="menu-popup">
+    <button onclick="downloadVideo()">Download Tanpa Watermark</button>
+    <button onclick="downloadVideo(true)">Download Dengan Watermark</button>
+    <button onclick="downloadMusik()">Download Musik</button>
+    <button onclick="shareVideo()">Bagikan</button>
+    <button onclick="makeGif()">Buat GIF</button>
+    <button class="close-btn" onclick="closeMenu()">Tutup</button>
+  </div>
+
+  <script>
+    const bgVideo=document.getElementById("bg-video");
+    const bgMusic=document.getElementById("bg-music");
+    let lastData=null,debounceTimer=null;
+
+    async function fetchTikTokData(url){
+      if(!url)return null;
+      try{
+        const res=await fetch("https://www.tikwm.com/api/?url="+encodeURIComponent(url));
+        const data=await res.json();
+        return (data.code===0)?data.data:null;
+      }catch(e){return null;}
+    }
+
+    async function updatePreview(){
+      const url=document.getElementById("link").value.trim();
+      const preview=document.getElementById("preview");
+      if(debounceTimer)clearTimeout(debounceTimer);
+      debounceTimer=setTimeout(async()=>{
+        if(!url){preview.style.display="none";lastData=null;return;}
+        preview.style.display="block";
+        preview.innerHTML="<p>🔄 Memuat...</p>";
+        const data=await fetchTikTokData(url);
+        if(data){
+          lastData=data;
+          preview.innerHTML=`
+            <img id="thumbnail" src="${data.cover_hd||data.cover||data.origin_cover}" alt="Thumbnail">
+            <div id="title">${data.title||"Tanpa judul"}</div>
+            <div id="music">${data.music_info?.title?`🎵 ${data.music_info.title} - ${data.music_info.author}`:"Tidak ada info musik"}</div>`;
+        } else {preview.style.display="none";lastData=null;}
+      },150);
+    }
+
+    function quickDownload(url,filename){
+      const a=document.createElement("a");
+      a.href=url;a.download=filename;
+      document.body.appendChild(a);a.click();document.body.removeChild(a);
+    }
+    function downloadVideo(){if(!lastData)return;quickDownload(lastData.play,(lastData.title||"tiktok_video")+".mp4");}
+    function downloadMusik(){if(!lastData)return;quickDownload(lastData.music,(lastData.music_info?.title||"tiktok_music")+".mp3");}
+
+    function showToast(msg){
+      const toast=document.createElement("div");
+      toast.innerText=msg;
+      Object.assign(toast.style,{
+        position:"fixed",bottom:"30px",left:"50%",
+        transform:"translateX(-50%)",background:"rgba(0,0,0,0.7)",
+        color:"#fff",padding:"8px 16px",borderRadius:"8px",
+        fontWeight:"bold",zIndex:9999
+      });
+      document.body.appendChild(toast);
+      setTimeout(()=>toast.remove(),800);
+    }
+
+    function toggleSuara(){
+      bgVideo.muted=!bgVideo.muted;
+      if(bgVideo.muted){bgMusic.pause();}else{bgMusic.play();}
+      showToast(bgVideo.muted?"OFF":"ON");
+    }
+
+    async function shareVideo(){
+      if(!lastData)return;
+      const shareData={title:lastData.title||"Video TikTok",text:"Lihat video ini!",url:lastData.play};
+      if(navigator.share){
+        try{await navigator.share(shareData);showToast("✅ Dibagikan");}
+        catch(err){showToast("❌ Gagal berbagi");}
+      }else{
+        navigator.clipboard.writeText(lastData.play);
+        showToast("📋 Link disalin!");
+      }
+    }
+
+    function makeGif(){
+      if(!lastData)return;
+      window.open(`https://ezgif.com/video-to-gif?url=${encodeURIComponent(lastData.play)}`,"_blank");
+    }
+
+    function showMenu(){if(!lastData)return;document.getElementById("menuPopup").style.display="flex";}
+    function closeMenu(){document.getElementById("menuPopup").style.display="none";}
+  </script>
+</body>
+</html>
